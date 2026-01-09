@@ -1,0 +1,132 @@
+# =========================================================
+# SETUP COMPLET (PowerShell / VSCode / Windows)
+# Projet FastAPI + SQLModel + Uvicorn
+# =========================================================
+
+
+# ---------- 1) Création structure projet ----------
+New-Item -ItemType Directory -Force -Path $ProjectPath | Out-Null
+Set-Location $ProjectPath
+
+New-Item -ItemType Directory -Force -Path `
+  "src",
+  "src\models",
+  "src\repositories",
+  "src\services",
+  "src\routes",
+  "src\conf",
+  "src\utils",
+  "tests" | Out-Null
+
+New-Item -ItemType File -Force -Path `
+  ".env",
+  "requirements.txt",
+  "README.md",
+  ".gitignore",
+  "src\__init__.py",
+  "src\models\__init__.py",
+  "src\repositories\__init__.py",
+  "src\services\__init__.py",
+  "src\routes\__init__.py",
+  "src\conf\__init__.py",
+  "src\utils\__init__.py",
+  "src\main.py",
+  "tests\conftest.py",
+  "tests\test_health.py" | Out-Null
+
+# ---------- 2) Venv (version prof) ----------
+python -m venv .venv
+
+# Activation PowerShell (dans VSCode)
+# NOTE: le prof donne souvent ".venv\Scripts\activate" (CMD), en PowerShell c’est Activate.ps1
+try {
+    .\.venv\Scripts\Activate.ps1
+}
+catch {
+    Write-Host "⚠️ Activation bloquée (ExecutionPolicy). Correction temporaire..."
+    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+    .\.venv\Scripts\Activate.ps1
+}
+
+# Vérifier que c'est le bon python
+python -c "import sys; print('Python:', sys.executable)"
+
+# ---------- 3) Installer les dépendances (version prof + utiles) ----------
+python -m pip install --upgrade pip
+
+# Dépendances demandées
+pip install fastapi sqlmodel "uvicorn[standard]"
+
+# Bibliothèques utiles (comme dans l'énoncé)
+pip install python-dotenv pymysql
+
+# Outils utiles en projet (tests / qualité)
+pip install pytest httpx ruff
+
+# ---------- 4) Figer requirements.txt (version prof) ----------
+pip freeze > requirements.txt
+
+# ---------- 5) Contenu minimal des fichiers ----------
+@"
+.venv/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+.ruff_cache/
+"@ | Set-Content -Encoding utf8 .gitignore
+
+@"
+# Exemple de configuration
+# SQLite:
+DATABASE_URL=sqlite:///./app.db
+
+# Exemple MySQL (PyMySQL) :
+# DATABASE_URL=mysql+pymysql://user:password@localhost:3306/dbname
+"@ | Set-Content -Encoding utf8 .env
+
+@"
+from fastapi import FastAPI
+
+app = FastAPI(title="Mon API Utilisateurs")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+"@ | Set-Content -Encoding utf8 src\main.py
+
+@"
+from fastapi.testclient import TestClient
+from src.main import app
+
+client = TestClient(app)
+
+def test_health():
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok"}
+"@ | Set-Content -Encoding utf8 tests\test_health.py
+
+@"
+# $ProjectName
+
+API REST Utilisateurs - FastAPI + SQLModel
+
+## Installation
+1) python -m venv .venv
+2) activer le venv
+3) pip install -r requirements.txt
+
+## Lancer
+uvicorn src.main:app --reload
+"@ | Set-Content -Encoding utf8 README.md
+
+# ---------- 6) Vérifications rapides ----------
+Write-Host "`n✅ Vérif imports..."
+python -c "import fastapi, sqlmodel, uvicorn, dotenv; print('OK: fastapi/sqlmodel/uvicorn/dotenv')"
+python -c "import pymysql; print('OK: pymysql')" 2>$null
+
+Write-Host "`n✅ Setup terminé."
+Write-Host "➡️ Lancer l'API : uvicorn src.main:app --reload"
+Write-Host "➡️ Tester : http://127.0.0.1:8000/health"
+Write-Host "➡️ Lancer les tests : pytest"
