@@ -21,3 +21,5 @@ async def health_check():                                # async car opération 
    return {"status": "ok"}                               # retourne un statut "ok" si l'API est en bonne santé
 
 
+create_user()
+   
